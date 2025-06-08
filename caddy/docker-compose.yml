@@ -1,0 +1,29 @@
+services:
+  caddy:
+    image: lucaslorentz/caddy-docker-proxy:2.8.0
+    container_name: caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - CADDY_INGRESS_NETWORK=web
+      - CLOUDFLARE_API_TOKEN=\${CF_API_TOKEN}
+    networks:
+      - web
+    restart: unless-stopped
+
+  myapi:
+    build: .
+    container_name: myapi
+    labels:
+      caddy: $DOMAIN
+      caddy.reverse_proxy: "{{upstreams 8080}}"
+      caddy.tls.dns: cloudflare \${CF_API_TOKEN}
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
