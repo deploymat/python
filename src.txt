@@ -1,0 +1,47 @@
+deploymat/
+├── LICENSE                     ❌ Brakuje
+├── .gitignore                  ❌ Brakuje
+├── .pre-commit-config.yaml     ❌ Brakuje
+├── Makefile                    ❌ Brakuje
+├── docker-compose.dev.yml      ❌ Brakuje
+├── Dockerfile                  ❌ Brakuje
+│
+├── deploymat/
+│   ├── api/
+│   │   ├── __init__.py         ❌ Brakuje
+│   │   ├── models.py           ❌ Brakuje
+│   │   ├── dependencies.py     ❌ Brakuje
+│   │   └── middleware.py       ❌ Brakuje
+│   │
+│   ├── templates/              ❌ Brakuje cały katalog
+│   │   ├── docker-compose.yml.j2
+│   │   ├── Caddyfile.j2
+│   │   ├── Dockerfile.j2
+│   │   └── nginx.conf.j2
+│   │
+│   └── tests/                  ❌ Brakuje cały katalog
+│       ├── __init__.py
+│       ├── test_core.py
+│       ├── test_api.py
+│       ├── test_cloudflare.py
+│       ├── test_git.py
+│       └── conftest.py
+│
+├── docs/                       ❌ Brakuje cały katalog
+│   ├── index.md
+│   ├── installation.md
+│   ├── quickstart.md
+│   ├── api.md
+│   ├── configuration.md
+│   └── examples.md
+│
+├── scripts/                    ❌ Brakuje cały katalog
+│   ├── setup.sh
+│   ├── deploy.sh
+│   └── cleanup.sh
+│
+└── examples/                   ❌ Brakuje cały katalog
+    ├── flask-app/
+    ├── fastapi-app/
+    ├── static-site/
+    └── full-stack/
