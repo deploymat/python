@@ -1,15 +1,16 @@
 services:
   caddy:
-    image: lucaslorentz/caddy-docker-proxy:2.8.0
+    image: caddy:2.8.0
     container_name: caddy
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
     environment:
-      - CADDY_INGRESS_NETWORK=web
-      - CLOUDFLARE_API_TOKEN=\${CF_API_TOKEN}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
     networks:
       - web
     restart: unless-stopped
@@ -17,13 +18,16 @@ services:
   myapi:
     build: .
     container_name: myapi
-    labels:
-      caddy: $DOMAIN
-      caddy.reverse_proxy: "{{upstreams 8080}}"
-      caddy.tls.dns: cloudflare \${CF_API_TOKEN}
+    expose:
+      - "8080"
     networks:
       - web
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 
 networks:
   web:
     external: true
+
+volumes:
+  caddy_data:
+  caddy_config:

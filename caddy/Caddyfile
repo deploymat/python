@@ -1,0 +1,6 @@
+api.naszed.de {
+    reverse_proxy myapi:8080
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+}

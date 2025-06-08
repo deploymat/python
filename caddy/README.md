@@ -1,84 +1,204 @@
-```bash
-docker network create web
+# 🚀 Caddy Reverse Proxy with Docker + FastAPI
 
-echo "🐋 Building and starting containers..."
-docker-compose --env-file .env up -d --build
-docker-compose up -d
+A lightweight, automated, and production-ready reverse proxy setup using **Caddy** with **Docker**, featuring:
 
-```    
-
-
-lucaslorentz/caddy-docker-proxy: Obraz Caddy, który dynamicznie generuje konfigurację na podstawie Docker metadata (labels).
-
-Brak Caddyfile: Wszystko robisz przez labelsy, co spełnia Twoje wymaganie jednoplikowej konfiguracji.
-
-Certyfikaty SSL: W pełni automatyczne dzięki integracji z Cloudflare przez caddy.tls.dns.
-
-
-
-
-
-Absolutely! Below you'll find:
+* ✅ Automatic SSL via **Cloudflare DNS**
+* ✅ Dynamic reverse proxy via Docker **labels**
+* ✅ No manual Caddyfile needed
+* ✅ **FastAPI** backend with auto-reload support
+* ✅ Unified control with **Makefile**
 
 ---
 
-## ✅ 1. **Log Viewing Command**
+## 📋 Table of Contents
 
-To show logs for your API service (`myapi`):
-
-```bash
-docker-compose logs -f myapi
-```
-
-To show logs for **Caddy reverse proxy**:
-
-```bash
-docker-compose logs -f caddy
-```
-
-> Add `--tail=100` to limit to the last 100 lines.
+* [✨ Features](#-features)
+* [📋 Prerequisites](#-prerequisites)
+* [🚀 Quick Start](#-quick-start)
+* [📦 Installation](#-installation)
+* [🛠️ Usage (Makefile)](#️-usage-makefile)
+* [📜 Logs](#-logs)
+* [⚙️ Configuration](#-configuration)
+* [🔧 Optional Enhancements](#-optional-enhancements)
+* [ℹ️ Notes](#️-notes)
 
 ---
 
-## 🛠️ 2. **Installation Script** — `install.sh`
+## ✨ Features
 
-This script will:
+* 🔐 Automatic HTTPS with Cloudflare DNS
+* 🐳 Dockerized FastAPI microservice
+* 🔄 Auto-reload during development
+* ⚙️ Declarative service routing via Docker labels
+* 🧼 Clean, one-file `Makefile` interface
+* 🧪 Ready for testing and CI workflows
 
-* Clone or create your project folder
-* Set up FastAPI app
-* Write Dockerfile and `docker-compose.yml`
-* Create `.env` file (you just need to add your Cloudflare token)
-* Pull Docker images
-* Build and run the services
+---
 
-## 🚀 How to use:
+## 📋 Prerequisites
+
+* ✅ Docker & Docker Compose
+* ✅ Cloudflare-managed domain
+* ✅ Cloudflare API Token with DNS edit permission
+
+---
+
+## 🚀 Quick Start
+
+1. Clone repo & navigate:
+
+   ```bash
+   git clone https://your-repo-url
+   cd your-repo
+   ```
+
+2. Create a Docker network (once):
+
+   ```bash
+   docker network create web || true
+   ```
+
+3. Add your `.env` file:
+
+   ```env
+   CLOUDFLARE_API_TOKEN=your_cloudflare_token_here
+   DOMAIN=example.com
+   EMAIL=admin@example.com
+   ```
+
+4. Start everything:
+
+   ```bash
+   make up
+   ```
+
+---
+
+## 📦 Installation
+
+You can also use the provided installation script:
 
 ```bash
 chmod +x install.sh
 ./install.sh
 ```
 
+The script will:
 
+* Scaffold your project
+* Download Docker images
+* Configure FastAPI app
+* Set up Caddy reverse proxy
+* Start services
 
-## 📦 How to use
+---
 
-1. Save as `Makefile` in your project root (same dir as `docker-compose.yml`)
-2. Ensure `.env` exists (with `CF_API_TOKEN`)
-3. Run commands like:
+## 🛠️ Usage (Makefile)
+
+Unified CLI control with:
 
 ```bash
-make up
-make logs
-make down
-make restart
+make up         # Build and run all containers
+make down       # Stop containers
+make restart    # Restart containers
+make logs       # Show combined logs (API + Caddy)
+make logs-api   # Show only API logs
+make logs-caddy # Show only Caddy logs
+make shell      # Open shell in the API container
+make clean      # Remove all containers, volumes, and dangling images
+make health     # Check public HTTP health of the service
 ```
 
 ---
 
-### ✅ Optional Enhancements:
+## 🧪 Developer Tools
 
-* Add `lint`, `test`, or `deploy` commands
-* Auto-reload support for dev via volumes
-* Multiple service support: `PROJECT_NAME ?= $(SERVICE)` via arguments
+You can also use these commands:
 
-Let me know if you'd like those included too.
+```bash
+make lint     # Run linter (flake8)
+make test     # Run tests (pytest)
+make deploy   # (alias for up, or hook for real deploy)
+```
+
+✅ These run inside temporary containers – you don't need local Python installed.
+
+---
+
+## 📜 Logs
+
+```bash
+# Combined logs
+make logs
+
+# Individual service logs
+make logs-api
+make logs-caddy
+```
+
+---
+
+## ⚙️ Configuration
+
+1. `.env` file for secrets (required):
+
+```env
+CLOUDFLARE_API_TOKEN=your_cloudflare_token
+EMAIL=admin@example.com
+DOMAIN=example.com
+```
+
+2. Routing is defined via labels in `docker-compose.yml`:
+
+```yaml
+labels:
+  caddy: api.${DOMAIN}
+  caddy.reverse_proxy: "{{upstreams 8080}}"
+  caddy.tls.dns: "cloudflare {env.CLOUDFLARE_API_TOKEN}"
+```
+
+No need to manually write a Caddyfile — Caddy dynamically reads this.
+
+---
+
+## 🔧 Optional Enhancements
+
+### ✅ Lint & Test
+
+Makefile includes:
+
+```bash
+make lint   # Runs flake8 on your Python code
+make test   # Runs pytest inside container
+```
+
+### ♻️ Auto-reload
+
+FastAPI auto-reload enabled via:
+
+```yaml
+command: uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+volumes:
+  - ./app:/app/app:ro
+```
+
+### 📦 Multi-service support
+
+Support multiple services using:
+
+```bash
+make logs SERVICE=auth
+make shell SERVICE=web
+```
+
+`Makefile` dynamically uses `$(SERVICE)` to manage different containers.
+
+---
+
+## ℹ️ Notes
+
+* Uses `lucaslorentz/caddy-docker-proxy` for dynamic reverse proxy configuration.
+* All SSL certificates are auto-managed via Cloudflare DNS.
+* Works well on ARM (Raspberry Pi), VPS, and dev machines.
+* Recommended for small production deployments with minimal overhead.
+

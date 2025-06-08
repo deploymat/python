@@ -1,0 +1,14 @@
+---
+- name: Test Caddy and FastAPI services
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    caddy_domain: "{{ lookup('env', 'DOMAIN') | default('localhost', true) }}"
+    caddy_port: 443
+    fastapi_port: 8080
+    # Allow self-signed certs for local testing
+    validate_certs: "{{ 'no' if 'localhost' in caddy_domain else 'yes' }}"
+
+  roles:
+    - test_caddy

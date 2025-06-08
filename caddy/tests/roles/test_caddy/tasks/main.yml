@@ -1,0 +1,122 @@
+---
+- name: Ensure Docker SDK is available
+  ansible.builtin.pip:
+    name: docker
+    state: present
+  become: false
+  delegate_to: localhost
+
+- name: Check if Caddy container is running
+  community.docker.docker_container_info:
+    name: caddy
+  register: caddy_container
+  ignore_errors: yes
+  changed_when: false
+  tags:
+    - caddy
+    - container
+
+- name: Fail if Caddy container is not running
+  ansible.builtin.fail:
+    msg: "Caddy container is not running"
+  when: not caddy_container.container.State.Running
+  tags:
+    - caddy
+    - container
+
+- name: Check if FastAPI container is running
+  community.docker.docker_container_info:
+    name: myapi
+  register: fastapi_container
+  ignore_errors: yes
+  changed_when: false
+  tags:
+    - fastapi
+    - container
+
+- name: Fail if FastAPI container is not running
+  ansible.builtin.fail:
+    msg: "FastAPI container is not running"
+  when: not fastapi_container.container.State.Running
+  tags:
+    - fastapi
+    - container
+
+- name: Wait for Caddy to be ready
+  ansible.builtin.wait_for:
+    host: "{{ caddy_domain }}"
+    port: "{{ caddy_port }}"
+    timeout: 60
+    delay: 5
+  when: caddy_container.container.State.Running
+  ignore_errors: yes
+  register: caddy_ready
+  tags:
+    - caddy
+    - http
+
+- name: Test Caddy HTTPS endpoint
+  ansible.builtin.uri:
+    url: "https://{{ caddy_domain }}"
+    method: GET
+    validate_certs: "{{ validate_certs }}"
+    status_code: 200
+    timeout: 10
+  register: caddy_response
+  retries: 3
+  delay: 5
+  until: caddy_response.status == 200
+  ignore_errors: yes
+  tags:
+    - caddy
+    - http
+
+- name: Debug Caddy response
+  ansible.builtin.debug:
+    var: caddy_response
+  when: caddy_response is defined
+  tags:
+    - debug
+
+- name: Test FastAPI endpoint through Caddy
+  ansible.builtin.uri:
+    url: "https://{{ caddy_domain }}/docs"
+    method: GET
+    validate_certs: "{{ validate_certs }}"
+    return_content: yes
+    status_code: 200
+    timeout: 10
+  register: fastapi_response
+  retries: 3
+  delay: 5
+  until: fastapi_response.status == 200
+  ignore_errors: yes
+  tags:
+    - fastapi
+    - http
+
+- name: Verify FastAPI response contains Swagger UI
+  ansible.builtin.assert:
+    that:
+      - fastapi_response is defined
+      - fastapi_response.status == 200
+      - "'Swagger UI' in fastapi_response.content|string"
+    fail_msg: >
+      FastAPI Swagger UI not found in response.
+      Status: {{ fastapi_response.status | default('undefined') }}
+      Content: {{ fastapi_response.content[0:200] | default('No content') }}...
+  tags:
+    - fastapi
+    - content
+
+- name: Display test summary
+  ansible.builtin.debug:
+    msg: |
+      ========== Test Summary ==========
+      Caddy Container: {{ '✅ Running' if caddy_container.container.State.Running else '❌ Not Running' }}
+      FastAPI Container: {{ '✅ Running' if fastapi_container.container.State.Running else '❌ Not Running' }}
+      Caddy HTTPS: {{ '✅ Accessible' if caddy_response is defined and caddy_response.status == 200 else '❌ Unreachable' }}
+      FastAPI Docs: {{ '✅ Accessible' if fastapi_response is defined and fastapi_response.status == 200 else '❌ Unreachable' }}
+      =================================
+  tags:
+    - summary

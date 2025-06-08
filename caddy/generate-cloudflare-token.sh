@@ -24,7 +24,7 @@ echo "Ustaw zakres (Zone Resources):"
 echo "→ Include → Specific zone → wybierz swoją domenę"
 echo ""
 echo "🔑 Po wygenerowaniu tokenu, dodaj go do pliku .env jako:"
-echo "CF_API_TOKEN=twój_token_tutaj"
+echo "CLOUDFLARE_API_TOKEN=twój_token_tutaj"
 
 curl "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-     -H "Authorization: Bearer ${CF_API_TOKEN}"
+     -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
