@@ -1,0 +1,25 @@
+FROM python:3.9-slim
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    openssh-client \
+    sshpass \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Ansible and dependencies
+COPY requirements-ansible.txt .
+RUN pip install --no-cache-dir -r requirements-ansible.txt
+
+# Copy test files
+COPY . /tests
+WORKDIR /tests
+
+# Prevent SSH host key checking
+RUN mkdir -p ~/.ssh
+RUN echo "Host *" > ~/.ssh/config \
+    && echo "    StrictHostKeyChecking no" >> ~/.ssh/config \
+    && echo "    UserKnownHostsFile /dev/null" >> ~/.ssh/config
+
+ENTRYPOINT ["/tests/run_docker_tests.sh"]

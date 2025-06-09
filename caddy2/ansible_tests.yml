@@ -2,9 +2,35 @@
 - name: Test Caddy reverse proxy services
   hosts: localhost
   connection: local
-  gather_facts: false
+  gather_facts: true
   vars_files:
     - .env
+  vars:
+    # Default values for local testing
+    test_protocol: "https"
+    test_validate_certs: no
+    test_domain: "{{ DOMAIN }}"
+
+  pre_tasks:
+    - name: Detect Docker environment
+      set_fact:
+        in_docker: "{{ ansible_virtualization_type == 'docker' or 'docker' in ansible_fqdn }}"
+      ignore_errors: yes
+
+    - name: Set test variables for Docker environment
+      when: in_docker | bool
+      set_fact:
+        test_protocol: "http"
+        test_domain: "localhost"
+        test_validate_certs: no
+
+    - name: Display test configuration
+      debug:
+        msg: |
+          Test Configuration:
+          - Protocol: {{ test_protocol }}
+          - Domain: {{ test_domain }}
+          - Validate Certs: {{ test_validate_certs }}
 
   tasks:
     - name: Include test cases for each subdomain

@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  caddy:
+    image: caddy:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./html:/usr/share/caddy
+      - ./certs:/etc/caddy/certs
+    restart: unless-stopped

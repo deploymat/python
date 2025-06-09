@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Labels Demo</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+            --danger-color: #e74c3c;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f7fa;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            background: var(--dark-color);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .card h2 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+        
+        .services {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        
+        .service {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .service:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .service h3 {
+            color: var(--dark-color);
+            margin-bottom: 1rem;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 5px;
+            text-decoration: none;
+            margin-top: 1rem;
+            transition: background 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .btn-outline:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 2rem 0;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+        }
+        
+        @media (max-width: 768px) {
+            .services {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Docker Labels Demo</h1>
+            <p class="subtitle">Dynamic Caddy configuration using Docker labels</p>
+            <a href="#services" class="btn">Explore Services</a>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="card">
+            <h2>About This Demo</h2>
+            <p>This project demonstrates how to use Docker labels to dynamically configure Caddy as a reverse proxy for multiple services.</p>
+            <p>Each service is automatically discovered and configured based on its Docker labels, making it easy to add or remove services without modifying the Caddy configuration.</p>
+        </div>
+        
+        <h2 id="services">Available Services</h2>
+        <div class="services">
+            <div class="service">
+                <h3>Web Application</h3>
+                <p>A simple static website served by Nginx.</p>
+                <a href="https://web.demo.local" class="btn btn-outline">Visit Web</a>
+            </div>
+            
+            <div class="service">
+                <h3>API Service</h3>
+                <p>A simple API service that returns JSON responses.</p>
+                <a href="https://api.demo.local" class="btn btn-outline">Visit API</a>
+            </div>
+            
+            <div class="service">
+                <h3>Documentation</h3>
+                <p>Learn more about Caddy and Docker integration.</p>
+                <a href="https://caddyserver.com/docs/" target="_blank" class="btn btn-outline">View Docs</a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>How It Works</h2>
+            <p>This setup uses the <code>lucaslorentz/caddy-docker-proxy</code> image which automatically configures Caddy based on Docker container labels.</p>
+            
+            <h3>Example Service Configuration</h3>
+            <pre><code>services:
+  my-service:
+    image: nginx:alpine
+    labels:
+      - caddy=myservice.demo.local
+      - caddy.reverse_proxy={{upstreams 80}}
+    networks:
+      - caddy_network</code></pre>
+            
+            <p>This configuration will automatically create a reverse proxy for <code>myservice.demo.local</code> that forwards requests to the container's port 80.</p>
+        </div>
+    </div>
+    
+    <footer>
+        <p>&copy; 2025 Caddy Docker Demo. All rights reserved.</p>
+    </footer>
+    
+    <script>
+        // Simple client-side code to demonstrate interactivity
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add animation to service cards
+            const services = document.querySelectorAll('.service');
+            services.forEach((service, index) => {
+                service.style.opacity = '0';
+                service.style.transform = 'translateY(20px)';
+                service.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                
+                setTimeout(() => {
+                    service.style.opacity = '1';
+                    service.style.transform = 'translateY(0)';
+                }, 100 * index);
+            });
+            
+            // Add smooth scrolling for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    
+                    const targetId = this.getAttribute('href');
+                    if (targetId === '#') return;
+                    
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        window.scrollTo({
+                            top: targetElement.offsetTop - 80,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

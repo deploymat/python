@@ -1,50 +1,62 @@
-- name: Test {{ service.name }} service ({{ service.name }}.{{ DOMAIN }})
+---
+- name: "Test {{ service.name }} service ({{ service.name }}.{{ test_domain }}) via {{ test_protocol }}://"
   block:
-    - name: Test HTTP to HTTPS redirect for {{ service.name }}
+    - name: Test service endpoint for {{ service.name }}
       uri:
-        url: "http://{{ service.name }}.{{ DOMAIN }}"
+        url: "{{ test_protocol }}://{{ service.name }}.{{ test_domain }}{{ service.path }}"
         method: GET
-        follow_redirects: none
-        status_code: 301, 302
-        timeout: 10
-      register: http_redirect
-      ignore_errors: yes
-
-    - name: Verify HTTPS redirect for {{ service.name }}
-      assert:
-        that:
-          - "'https://' in http_redirect.redirected_url"
-          - "http_redirect.redirected_url == 'https://' ~ service.name ~ '.' ~ DOMAIN ~ service.path"
-        fail_msg: "HTTPS redirect failed for {{ service.name }}"
-
-    - name: Test {{ service.name }} service endpoint
-      uri:
-        url: "https://{{ service.name }}.{{ DOMAIN }}{{ service.path }}"
-        method: GET
-        validate_certs: no
         return_content: yes
         status_code: 200
+        validate_certs: "{{ test_validate_certs }}"
         timeout: 10
       register: service_response
       retries: 3
       delay: 2
       until: service_response is succeeded
       ignore_errors: yes
+      when: test_protocol == 'http' or not in_docker | bool
 
     - name: Verify {{ service.name }} service response
       assert:
         that:
           - "service_response.status == 200"
           - "service_response.content is defined"
-        fail_msg: "Service {{ service.name }} is not responding correctly"
+        fail_msg: |
+          Service {{ service.name }} is not responding correctly at {{ test_protocol }}://{{ service.name }}.{{ test_domain }}{{ service.path }}
+          Status: {{ service_response.status | default('No response') }}
+          Error: {{ service_response.msg | default('No error message') }}
+
+    - name: Test HTTPS redirect for {{ service.name }} (if not already on HTTPS)
+      uri:
+        url: "http://{{ service.name }}.{{ test_domain }}{{ service.path }}"
+        method: GET
+        follow_redirects: no
+        status_code: 301, 302
+        validate_certs: no
+        timeout: 10
+      register: http_redirect
+      ignore_errors: yes
+      when: test_protocol == 'https' and not in_docker | bool
+
+    - name: Verify HTTPS redirect for {{ service.name }}
+      assert:
+        that:
+          - "'https://' in http_redirect.redirected_url"
+          - "http_redirect.redirected_url is match('https://' ~ service.name ~ '\\..*' ~ service.path)"
+        fail_msg: "HTTPS redirect failed for {{ service.name }}"
+      when: test_protocol == 'https' and not in_docker | bool and http_redirect is defined
 
     - name: Debug - Show {{ service.name }} response headers
       debug:
         var: service_response.headers
         verbosity: 1
+      when: service_response is defined
 
   rescue:
     - name: Service {{ service.name }} test failed
       debug:
-        msg: "Test failed for {{ service.name }}: {{ ansible_failed_result.msg }}"
+        msg: |
+          Test failed for {{ service.name }}:
+          {{ ansible_failed_result.msg | default('No error message') }}
+          Response: {{ service_response | default('No response') | to_nice_json }}
       failed_when: true

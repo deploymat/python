@@ -1,0 +1,34 @@
+{
+    debug
+}
+
+:80 {
+    redir https://{host}{uri} permanent
+}
+
+:443 {
+    tls /etc/caddy/certs/localhost.crt /etc/caddy/certs/localhost.key
+
+    # API service
+    @api host api.lvh.me
+    handle @api {
+        reverse_proxy api:80
+    }
+
+    # Web service
+    @web host app.lvh.me
+    handle @web {
+        reverse_proxy web:80
+    }
+
+    # Auth service
+    @auth host auth.lvh.me
+    handle @auth {
+        reverse_proxy auth:80
+    }
+
+    # Domyślna odpowiedź
+    handle {
+        respond "Nie znaleziono serwisu dla {host}" 404
+    }
+}

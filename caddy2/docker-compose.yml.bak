@@ -15,7 +15,7 @@ services:
       - CADDY_DOCKER_PROCESS_CADDYFILE_PATH=/etc/caddy/Caddyfile
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
-      - /home/tom/.local/share/caddy-certs:/etc/caddy/certs
+      - ./certs:/etc/caddy/certs
       - /var/run/docker.sock:/var/run/docker.sock
       - caddy_data:/data
       - caddy_config:/config

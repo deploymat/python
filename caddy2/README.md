@@ -1,4 +1,148 @@
-To integrate Caddy into your Docker Compose setup for dynamic subdomain routing without external configuration files, use the `caddy-docker-proxy` solution. This approach leverages Docker labels for service discovery and environment variables for global settings, eliminating the need for a standalone Caddyfile.
+# Caddy Reverse Proxy with Docker Compose
+
+This project provides a production-ready Caddy reverse proxy setup with Docker Compose, featuring automatic HTTPS via Let's Encrypt and Cloudflare DNS. It's designed for zero-downtime deployments and dynamic service discovery.
+
+## 🚀 Features
+
+- **Zero Config**: No Caddyfile needed - uses Docker labels
+- **Automatic HTTPS**: Via Let's Encrypt with Cloudflare DNS challenge
+- **Dynamic Service Discovery**: Add/remove services without restarting Caddy
+- **Multi-Architecture**: Supports both AMD64 and ARM64
+- **Testing**: Built-in Ansible tests for local and CI environments
+- **Simple Management**: Makefile for common tasks
+
+## 🛠 Prerequisites
+
+- Docker and Docker Compose
+- A domain with DNS managed by Cloudflare
+- Cloudflare API token with DNS edit permissions
+
+## ⚡ Quick Start
+
+1. Clone the repository and navigate to the project directory:
+   ```bash
+   git clone <repository-url> caddy-proxy
+   cd caddy-proxy
+   ```
+
+2. Copy the example environment file and update with your settings:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your domain and Cloudflare token
+   ```
+
+3. Start the services:
+   ```bash
+   make up
+   ```
+
+4. Run tests to verify everything is working:
+   ```bash
+   make test
+   ```
+
+## 🧩 Configuration
+
+### Environment Variables
+
+Create a `.env` file with these variables:
+
+```env
+# Required
+DOMAIN=yourdomain.com
+CF_API_TOKEN=your_cloudflare_token
+
+# Optional (defaults shown)
+API_SUBDOMAIN=api
+WEB_SUBDOMAIN=app
+AUTH_SUBDOMAIN=auth
+```
+
+### Adding Services
+
+Add new services to `docker-compose.yml` with these labels:
+
+```yaml
+service-name:
+  image: your-image:tag
+  labels:
+    - caddy=${SERVICE_SUBDOMAIN}.${DOMAIN}
+    - caddy.reverse_proxy={{upstreams 80}}
+  networks:
+    - app-network
+```
+
+## 🧪 Testing
+
+### Run All Tests
+```bash
+make test  # Auto-detects environment
+```
+
+### Test in Docker
+```bash
+make test-docker
+```
+
+### Test Locally
+```bash
+make test-local
+```
+
+## 🛠 Makefile Commands
+
+| Command           | Description                                      |
+|-------------------|--------------------------------------------------|
+| `make up`        | Start all services in detached mode              |
+| `make down`      | Stop and remove all containers                   |
+| `make restart`   | Restart all services                            |
+| `make logs`      | View logs from all services                     |
+| `make status`    | Show status of all containers                   |
+| `make test`      | Run tests (auto-detects environment)            |
+| `make test-docker`| Run tests in Docker container                   |
+| `make test-local`| Run tests using local Python environment        |
+| `make clean`     | Remove all containers, networks, and volumes    |
+
+
+## 🔄 Adding New Services
+
+1. Add your service to `docker-compose.yml`
+2. Add appropriate Caddy labels
+3. Update the `.env` file if needed
+4. Run `make up` to deploy
+
+Example service configuration:
+
+```yaml
+service-name:
+  image: nginx:alpine
+  labels:
+    - caddy=service.${DOMAIN}
+    - caddy.reverse_proxy={{upstreams 80}}
+  networks:
+    - app-network
+```
+
+## 🔒 Security Considerations
+
+- Keep your `.env` file secure and never commit it to version control
+- Use least-privilege Cloudflare API tokens
+- Regularly update your Docker images
+- Enable Docker content trust
+
+## 📚 Documentation
+
+- [Caddy Docker Proxy](https://github.com/lucaslorentz/caddy-docker-proxy/)
+- [Caddy Documentation](https://caddyserver.com/docs/)
+- [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a new Pull Request
 
 ### ✅ Key Features
 - **Zero external config files** (no Caddyfile)

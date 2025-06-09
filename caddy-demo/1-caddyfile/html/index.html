@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Caddyfile Demo</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+        }
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 1rem;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Caddyfile Demo</h1>
+        <p>This is a static website served by Caddy using a Caddyfile configuration.</p>
+        <p>Features:</p>
+        <ul style="text-align: left; max-width: 300px; margin: 0 auto 1.5rem auto;">
+            <li>Automatic HTTPS</li>
+            <li>HTTP/2 enabled</li>
+            <li>Gzip compression</li>
+            <li>Security headers</li>
+        </ul>
+        <a href="https://caddyserver.com/docs/" class="btn" target="_blank">Caddy Documentation</a>
+    </div>
+</body>
+</html>

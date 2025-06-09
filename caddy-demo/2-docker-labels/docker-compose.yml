@@ -1,0 +1,67 @@
+version: '3.8'
+
+networks:
+  caddy_network:
+    driver: bridge
+
+services:
+  # Caddy with Docker proxy
+  caddy:
+    image: lucaslorentz/caddy-docker-proxy:latest
+    container_name: caddy-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CADDY_INGRESS_NETWORK=caddy_network
+      - CADDY_DOCKER_CADDYFILE_PATH=/etc/caddy/Caddyfile
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - caddy_network
+    restart: unless-stopped
+    labels:
+      - caddy.email=admin@example.com
+      - caddy_0=@default {
+          encode gzip
+          header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+            X-Content-Type-Options "nosniff"
+            X-Frame-Options "SAMEORIGIN"
+            X-XSS-Protection "1; mode=block"
+            Referrer-Policy "strict-origin-when-cross-origin"
+          }
+        }
+      - caddy_1=:80 {
+          redir https://{host}{uri} permanent
+        }
+
+  # Web service (static website)
+  web:
+    image: nginx:alpine
+    container_name: web-service
+    volumes:
+      - ./web:/usr/share/nginx/html
+    networks:
+      - caddy_network
+    labels:
+      - caddy=web.demo.local
+      - caddy.reverse_proxy={{upstreams 80}}
+      - caddy.@default
+
+  # API service (Python)
+  api:
+    build: ./api
+    container_name: api-service
+    networks:
+      - caddy_network
+    labels:
+      - caddy=api.demo.local
+      - caddy.reverse_proxy={{upstreams 8000}}
+      - caddy.@default
+
+volumes:
+  caddy_data:
+  caddy_config:
