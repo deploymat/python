@@ -1,0 +1,144 @@
+---
+- name: Test Caddy and FastAPI Services
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  
+  vars:
+    caddy_domain: "{{ lookup('env', 'DOMAIN') | default('localhost', true) }}"
+    validate_certs: "{{ 'no' if 'localhost' in caddy_domain else 'yes' }}"
+    
+  tasks:
+    - name: Check if Docker is running
+      ansible.builtin.command: docker info
+      register: docker_info
+      changed_when: false
+      ignore_errors: yes
+      
+    - name: Fail if Docker is not running
+      ansible.builtin.fail:
+        msg: "Docker is not running. Please start Docker and try again."
+      when: docker_info.rc != 0
+      
+    - name: Check container status using shell
+      ansible.builtin.shell: |
+        for container in caddy myapi; do
+          if docker ps --format '{{ '{{.Names}}' }}' | grep -q "^$container$"; then
+            echo "$container:running"
+          else
+            echo "$container:stopped"
+          fi
+        done
+      register: container_status
+      changed_when: false
+      
+    - name: Display container status
+      ansible.builtin.debug:
+        msg: "Container {{ item.split(':')[0] }} is {{ 'running' if item.endswith('running') else 'not running' }}"
+      loop: "{{ container_status.stdout_lines }}"
+      
+    - name: Set container status fact
+      ansible.builtin.set_fact:
+        all_containers_running: "{{ container_status.stdout | regex_replace('\\n', '') == 'caddy:runningmyapi:running' }}"
+        
+    - name: Fail if containers are not running
+      ansible.builtin.fail:
+        msg: "Some containers are not running. Please check with 'docker-compose ps'"
+      when: not all_containers_running
+      
+    - name: Ensure virtualenv is available
+      ansible.builtin.pip:
+        name: virtualenv
+        state: present
+        executable: "{{ ansible_python_interpreter | default('python3') }}"
+      delegate_to: localhost
+      run_once: true
+      become: false
+      
+    - name: Create a virtual environment
+      ansible.builtin.command: "{{ ansible_python_interpreter | default('python3') }} -m venv {{ playbook_dir }}/.venv"
+      args:
+        creates: "{{ playbook_dir }}/.venv/bin/activate"
+      delegate_to: localhost
+      run_once: true
+      become: false
+      
+    - name: Install required Python packages
+      ansible.builtin.pip:
+        name:
+          - requests
+          - urllib3
+        state: present
+        virtualenv: "{{ playbook_dir }}/.venv"
+        virtualenv_python: "{{ ansible_python_interpreter | default('python3') }}"
+      delegate_to: localhost
+      become: false
+      
+    - name: Test Caddy HTTPS endpoint
+      ansible.builtin.uri:
+        url: "https://{{ caddy_domain }}"
+        method: GET
+        validate_certs: "{{ validate_certs }}"
+        status_code: 200
+        timeout: 10
+      register: caddy_test
+      retries: 3
+      delay: 5
+      until: caddy_test is defined and caddy_test.status == 200
+      ignore_errors: true
+      
+    - name: Test FastAPI endpoint
+      ansible.builtin.uri:
+        url: "https://{{ caddy_domain }}/docs"
+        method: GET
+        validate_certs: "{{ validate_certs }}"
+        status_code: 200
+        timeout: 10
+      register: fastapi_test
+      retries: 3
+      delay: 5
+      until: fastapi_test is defined and fastapi_test.status == 200
+      ignore_errors: true
+      
+    - name: Display test results
+      ansible.builtin.debug:
+        msg: |
+          === Test Results ===
+          Caddy HTTPS: {{ '✅ PASS' if caddy_test.status == 200 else '❌ FAIL' }}
+          FastAPI Docs: {{ '✅ PASS' if fastapi_test.status == 200 else '❌ FAIL' }}
+          ===================
+      
+    - name: Get container logs if tests failed
+      ansible.builtin.shell: docker logs --tail 20 {{ item }}
+      register: container_logs
+      loop:
+        - caddy
+        - myapi
+      when: 
+        - caddy_test is defined 
+        - fastapi_test is defined
+        - (caddy_test.status | default(0) != 200) or (fastapi_test.status | default(0) != 200)
+      changed_when: false
+      ignore_errors: true
+      
+    - name: Show container logs if tests failed
+      ansible.builtin.debug:
+        msg: |
+          === Container Logs ===
+          {% for log in container_logs.results %}
+          --- {{ log.item }} ---
+          {{ log.stdout | default('No logs available') }}
+          
+          {% endfor %}
+      when: container_logs is defined and container_logs.results is defined
+      
+    - name: Fail if tests failed
+      ansible.builtin.fail:
+        msg: |
+          Some tests failed. Check the logs above for details.
+          Caddy status: {{ caddy_test.status | default('Not tested') }}
+          FastAPI status: {{ fastapi_test.status | default('Not tested') }}
+      when: 
+        - caddy_test is defined 
+        - fastapi_test is defined
+        - (caddy_test.status | default(0) != 200) or (fastapi_test.status | default(0) != 200)

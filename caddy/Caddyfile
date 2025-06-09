@@ -1,6 +1,20 @@
 api.naszed.de {
     reverse_proxy myapi:8080
     tls {
-        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN} {
+            email {env.CLOUDFLARE_EMAIL}
+        }
+    }
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 10MB
+            roll_keep 10
+        }
+    }
+    errors {
+        output file /var/log/caddy/error.log {
+            roll_size 10MB
+            roll_keep 10
+        }
     }
 }

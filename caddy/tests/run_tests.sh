@@ -10,7 +10,7 @@ if [ ! -d "$VENV_DIR" ]; then
     $PYTHON_PATH -m venv "$VENV_DIR"
     source "$VENV_DIR/bin/activate"
     pip install --upgrade pip
-    pip install ansible docker requests
+    pip install ansible docker requests packaging
     deactivate
 fi
 
