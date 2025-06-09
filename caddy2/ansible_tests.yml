@@ -1,0 +1,50 @@
+---
+- name: Test Caddy reverse proxy services
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - .env
+
+  tasks:
+    - name: Include test cases for each subdomain
+      include_tasks: test_services.yml
+      loop:
+        - { name: "api", port: 80, path: "/" }
+        - { name: "web", port: 80, path: "/" }
+        - { name: "auth", port: 80, path: "/" }
+      loop_control:
+        loop_var: service
+
+    - name: Test HTTPS redirect
+      uri:
+        url: "http://{{ DOMAIN }}"
+        method: GET
+        follow_redirects: none
+        status_code: 301, 302
+        timeout: 10
+      register: http_redirect
+      failed_when: false
+
+    - name: Verify HTTPS redirect
+      assert:
+        that:
+          - "'https://' in http_redirect.redirected_url"
+          - "http_redirect.redirected_url == 'https://' ~ DOMAIN ~ '/'"
+        fail_msg: "HTTPS redirect failed"
+
+    - name: Test HTTP/2 support
+      uri:
+        url: "https://{{ DOMAIN }}"
+        method: GET
+        validate_certs: no
+        timeout: 10
+      register: http2_test
+      failed_when: false
+
+    - name: Verify HTTP/2 support
+      assert:
+        that:
+          - "http2_test.status == 200"
+          - "'HTTP/2' in http2_test.msg"
+        fail_msg: "HTTP/2 not supported"

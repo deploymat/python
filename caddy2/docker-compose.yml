@@ -1,0 +1,55 @@
+version: '3.8'
+
+networks:
+  app-network:
+    driver: bridge
+
+services:
+  # Caddy Reverse Proxy with Docker Integration
+  caddy:
+    image: lucaslorentz/caddy-docker-proxy:latest
+    environment:
+      - CADDY_DOCKER_PROXY_ACME_DNS=cloudflare ${CF_API_TOKEN}
+      - CADDY_DOCKER_PROXY_ACME_EMAIL=admin@${DOMAIN}
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Example API Service
+  api:
+    image: nginx:alpine
+    labels:
+      - caddy=${API_SUBDOMAIN}.${DOMAIN}
+      - caddy.reverse_proxy={{upstreams 80}}
+    networks:
+      - app-network
+
+  # Example Web App
+  web:
+    image: nginx:alpine
+    labels:
+      - caddy=${WEB_SUBDOMAIN}.${DOMAIN}
+      - caddy.reverse_proxy={{upstreams 80}}
+    networks:
+      - app-network
+
+  # Example Auth Service
+  auth:
+    image: nginx:alpine
+    labels:
+      - caddy=${AUTH_SUBDOMAIN}.${DOMAIN}
+      - caddy.reverse_proxy={{upstreams 80}}
+    networks:
+      - app-network
+
+volumes:
+  caddy_data:
+  caddy_config:

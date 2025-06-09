@@ -1,0 +1,50 @@
+- name: Test {{ service.name }} service ({{ service.name }}.{{ DOMAIN }})
+  block:
+    - name: Test HTTP to HTTPS redirect for {{ service.name }}
+      uri:
+        url: "http://{{ service.name }}.{{ DOMAIN }}"
+        method: GET
+        follow_redirects: none
+        status_code: 301, 302
+        timeout: 10
+      register: http_redirect
+      ignore_errors: yes
+
+    - name: Verify HTTPS redirect for {{ service.name }}
+      assert:
+        that:
+          - "'https://' in http_redirect.redirected_url"
+          - "http_redirect.redirected_url == 'https://' ~ service.name ~ '.' ~ DOMAIN ~ service.path"
+        fail_msg: "HTTPS redirect failed for {{ service.name }}"
+
+    - name: Test {{ service.name }} service endpoint
+      uri:
+        url: "https://{{ service.name }}.{{ DOMAIN }}{{ service.path }}"
+        method: GET
+        validate_certs: no
+        return_content: yes
+        status_code: 200
+        timeout: 10
+      register: service_response
+      retries: 3
+      delay: 2
+      until: service_response is succeeded
+      ignore_errors: yes
+
+    - name: Verify {{ service.name }} service response
+      assert:
+        that:
+          - "service_response.status == 200"
+          - "service_response.content is defined"
+        fail_msg: "Service {{ service.name }} is not responding correctly"
+
+    - name: Debug - Show {{ service.name }} response headers
+      debug:
+        var: service_response.headers
+        verbosity: 1
+
+  rescue:
+    - name: Service {{ service.name }} test failed
+      debug:
+        msg: "Test failed for {{ service.name }}: {{ ansible_failed_result.msg }}"
+      failed_when: true
