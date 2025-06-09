@@ -90,4 +90,4 @@ If ports 80/443 are in use:
 
 ## License
 
-MIT
+Apache 2

@@ -115,4 +115,4 @@ If you get port conflicts (80 or 443 already in use):
 
 ## License
 
-MIT
+Apache 2

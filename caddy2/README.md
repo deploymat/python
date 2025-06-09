@@ -1,56 +1,81 @@
-# Caddy Reverse Proxy with Docker Compose
+# 🚀 Caddy Reverse Proxy with Docker
 
-This project provides a production-ready Caddy reverse proxy setup with Docker Compose, featuring automatic HTTPS via Let's Encrypt and Cloudflare DNS. It's designed for zero-downtime deployments and dynamic service discovery.
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Docker Pulls](https://img.shields.io/docker/pulls/lucaslorentz/caddy-docker-proxy.svg)](https://hub.docker.com/r/lucaslorentz/caddy-docker-proxy/)
 
-## 🚀 Features
+A production-ready Caddy reverse proxy setup with Docker Compose, featuring automatic HTTPS via Let's Encrypt and Cloudflare DNS. Designed for zero-downtime deployments and dynamic service discovery.
 
-- **Zero Config**: No Caddyfile needed - uses Docker labels
+## 📋 Table of Contents
+
+- [Features](#-features)
+- [Prerequisites](#-prerequisites)
+- [Quick Start](#-quick-start)
+- [Configuration](#-configuration)
+- [Project Structure](#-project-structure)
+- [Usage](#-usage)
+- [Testing](#-testing)
+- [Troubleshooting](#-troubleshooting)
+- [License](#-license)
+
+## ✨ Features
+
+- **Zero Config**: Uses Docker labels for configuration
 - **Automatic HTTPS**: Via Let's Encrypt with Cloudflare DNS challenge
 - **Dynamic Service Discovery**: Add/remove services without restarting Caddy
 - **Multi-Architecture**: Supports both AMD64 and ARM64
-- **Testing**: Built-in Ansible tests for local and CI environments
-- **Simple Management**: Makefile for common tasks
+- **Built-in Testing**: Ansible tests for local and CI environments
+- **Simple Management**: Comprehensive Makefile for common tasks
 
 ## 🛠 Prerequisites
 
 - Docker and Docker Compose
-- A domain with DNS managed by Cloudflare
+- Domain with DNS managed by Cloudflare
 - Cloudflare API token with DNS edit permissions
+- `mkcert` for local development (optional)
 
 ## ⚡ Quick Start
 
-1. Clone the repository and navigate to the project directory:
+1. Clone the repository:
    ```bash
-   git clone <repository-url> caddy-proxy
-   cd caddy-proxy
+   git clone <repository-url> caddy2
+   cd caddy2
    ```
 
-2. Copy the example environment file and update with your settings:
+2. Set up environment:
    ```bash
    cp .env.example .env
-   # Edit .env with your domain and Cloudflare token
+   # Edit .env with your configuration
    ```
 
-3. Start the services:
+3. Start services:
    ```bash
    make up
    ```
 
-4. Run tests to verify everything is working:
+4. Verify installation:
    ```bash
    make test
    ```
 
-## 🧩 Configuration
+## ⚙️ Configuration
 
 ### Environment Variables
 
-Create a `.env` file with these variables:
+Create or edit `.env` file with these variables:
 
 ```env
-# Required
+# Required for Cloudflare DNS challenge
 DOMAIN=yourdomain.com
 CF_API_TOKEN=your_cloudflare_token
+
+# Optional: Email for Let's Encrypt notifications
+# EMAIL=your-email@example.com
+
+# Optional: Staging mode for testing (set to 'true' to avoid rate limits)
+# STAGING=false
+
+# Optional: Additional domains (space-separated)
+# EXTRA_DOMAINS=www.yourdomain.com api.yourdomain.com
 
 # Optional (defaults shown)
 API_SUBDOMAIN=api
@@ -162,11 +187,128 @@ networks:
   app-network:
     driver: bridge
 
-services:
-  # Caddy Reverse Proxy with Docker Integration
-  caddy:
-    image: lucaslorentz/caddy-docker-proxy:latest
-    environment:
+## 📁 Project Structure
+
+```
+caddy2/
+├── .env                    # Environment variables
+├── .env.example            # Example environment configuration
+├── .gitignore              # Git ignore rules
+├── Caddyfile               # Base Caddy configuration
+├── docker-compose.yml      # Main Docker Compose configuration
+├── Makefile                # Project automation
+├── README.md               # This file
+├── config/                 # Additional Caddy configuration files
+│   └── custom-config.json  # Custom Caddy JSON config
+├── certs/                  # SSL certificates (auto-generated)
+│   ├── localhost.crt      # Local development certificate
+│   └── localhost.key       # Local development key
+└── scripts/                # Utility scripts
+    ├── generate-certs.sh   # Certificate generation script
+    └── test/               # Test scripts
+        ├── run_tests.sh    # Test runner
+        └── test_api.py     # API test cases
+```
+
+## 🚀 Usage
+
+### Starting Services
+
+```bash
+# Start all services in detached mode
+make up
+
+# View logs
+make logs
+
+# Check service status
+make status
+```
+
+### Managing Services
+
+```bash
+# Stop services
+make down
+
+# Restart services
+make restart
+
+# Rebuild and restart
+make rebuild
+```
+
+### Development
+
+```bash
+# Open shell in Caddy container
+make shell
+
+# Reload Caddy configuration
+make reload
+
+# Check certificate status
+make certs
+```
+
+## 🧪 Testing
+
+Run the test suite:
+
+```bash
+# Auto-detect environment and run appropriate tests
+make test
+
+# Run tests locally (requires Python and Ansible)
+make test-local
+
+# Run tests in Docker container
+make test-docker
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **Certificate Generation Fails**
+   - Ensure your domain's DNS is properly configured
+   - Verify Cloudflare API token has correct permissions
+   - Check Docker logs: `docker-compose logs caddy`
+
+2. **Port Conflicts**
+   - Stop other services using ports 80/443
+   - Or modify ports in `docker-compose.yml`
+
+3. **Container Fails to Start**
+   - Check logs: `make logs`
+   - Verify environment variables are set correctly
+
+### Viewing Logs
+
+```bash
+# View last 100 log lines
+make logs
+
+# Follow logs in real-time
+make logs-tail
+```
+
+## 📜 License
+
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Caddy Server](https://caddyserver.com/)
+- [Caddy Docker Proxy](https://github.com/lucaslorentz/caddy-docker-proxy)
+- [Let's Encrypt](https://letsencrypt.org/)
+
+## 📝 Todo
+
+- [ ] Add monitoring setup
+- [ ] Include rate limiting example
+- [ ] Add backup/restore scripts
+- [ ] Document advanced configurations
       - CADDY_DOCKER_PROXY_ACME_DNS=cloudflare ${CF_API_TOKEN}
       - CADDY_DOCKER_PROXY_ACME_EMAIL=admin@example.com
       - DOMAIN=example.com

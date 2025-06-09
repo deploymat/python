@@ -66,4 +66,4 @@ This project demonstrates a simple static website served by Caddy using a Caddyf
 
 ## License
 
-MIT
+Apache 2

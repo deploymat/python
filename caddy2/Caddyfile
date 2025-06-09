@@ -1,34 +1,143 @@
+# Global settings
 {
-    debug
+    # Log level from environment variable
+    log {
+        level {env.LOG_LEVEL}
+        output file /var/log/caddy/access.log {
+            roll_size 10MiB
+            roll_keep 5
+            roll_keep_for 24h
+        }
+    }
+
+    # Enable the admin API endpoint
+    admin off
+    
+    # Enable automatic HTTPS
+    auto_https disable_redirects
+    email {env.EMAIL}
+    
+    # Enable the HTTP/3
+    servers {
+        protocol {
+            experimental_http3
+        }
+    }
 }
 
-:80 {
-    redir https://{host}{uri} permanent
+# Redirect HTTP to HTTPS if not disabled
+{env.HTTP_PORT}:{
+    @http {
+        protocol http
+    }
+    redir @http https://{host}{uri} permanent
 }
 
-:443 {
-    tls /etc/caddy/certs/localhost.crt /etc/caddy/certs/localhost.key
-
+# Main HTTPS server
+{env.HTTPS_PORT}:{
+    # TLS configuration
+    tls {
+        issuer acme {
+            email {env.EMAIL}
+            dns cloudflare {env.CF_API_TOKEN}
+            resolvers 1.1.1.1
+        }
+        
+        # Use staging for testing to avoid rate limits
+        {$STAGING}
+        
+        # Use local certificates in development
+        {$DEV_MODE} {
+            issuer self_signed
+        }
+    }
+    
+    # Security headers
+    header {
+        # Enable HSTS (1 year)
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        
+        # Prevent clickjacking
+        X-Frame-Options "DENY"
+        
+        # Enable XSS protection
+        X-XSS-Protection "1; mode=block"
+        
+        # Prevent MIME type sniffing
+        X-Content-Type-Options "nosniff"
+        
+        # Referrer policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+        
+        # Content Security Policy
+        # Modify this according to your application's needs
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'"
+        
+        # Remove server header
+        -Server
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 10MiB
+            roll_keep 5
+            roll_keep_for 24h
+        }
+    }
+    
     # API service
-    @api host api.lvh.me
+    @api {
+        host api.{env.DOMAIN}
+    }
     handle @api {
-        reverse_proxy api:80
+        reverse_proxy api:${API_PORT}
+        
+        # Rate limiting
+        @login {
+            path /login
+            method POST
+        }
+        
+        route @login {
+            rate_limit 10/1m 50
+            reverse_proxy api:${API_PORT}
+        }
     }
-
-    # Web service
-    @web host app.lvh.me
+    
+    # Web application
+    @web {
+        host app.{env.DOMAIN}
+    }
     handle @web {
-        reverse_proxy web:80
+        root * /srv
+        file_server browse
+        try_files {path} /index.html
     }
-
-    # Auth service
-    @auth host auth.lvh.me
+    
+    # Authentication service
+    @auth {
+        host auth.{env.DOMAIN}
+    }
     handle @auth {
-        reverse_proxy auth:80
+        reverse_proxy auth:${AUTH_PORT}
     }
+    
+    # Default response for undefined hosts
+    @notfound {
+        not host {env.DOMAIN} {env.API_SUBDOMAIN}.{env.DOMAIN} {env.WEB_SUBDOMAIN}.{env.DOMAIN} {env.AUTH_SUBDOMAIN}.{env.DOMAIN}
+    }
+    respond @notfound "Service not found" 404
+    
+    # Health check endpoint
+    handle /healthz {
+        respond "OK" 200
+    }
+}
 
-    # Domyślna odpowiedź
-    handle {
-        respond "Nie znaleziono serwisu dla {host}" 404
+# Debug endpoint (only in development)
+{$DEV_MODE} {
+    handle /debug/* {
+        respond "Debug information" 200
     }
 }
